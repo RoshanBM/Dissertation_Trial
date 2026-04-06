@@ -30,3 +30,4 @@ GNSS_Multipath_Project/data/**/*.kml filter=lfs diff=lfs merge=lfs -text
 /GNSS_Multipath_Project/data/01_raw/2020-09-04-US-SF-1/Pixel4_GnssLog.txt filter=lfs diff=lfs merge=lfs -text
 /GNSS_Multipath_Project/data/01_raw/2020-09-04-US-SF-2/Pixel4XL_GnssLog.txt filter=lfs diff=lfs merge=lfs -text
 /GNSS_Multipath_Project/data/01_raw/2020-09-04-US-SF-2/Pixel4_GnssLog.txt filter=lfs diff=lfs merge=lfs -text
+GNSS_Multipath_Project/data/03_processed/gnss_data_with_residuals.csv filter=lfs diff=lfs merge=lfs -text
