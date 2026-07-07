@@ -1,0 +1,187 @@
+--- CELL 0 [markdown] ---
+# GNSS Track Maps — All Collection Days
+
+One map per day. Each track is a separate SPAN NMEA file (10 Hz preferred). Blue = first run, Red = second run, etc.
+
+--- CELL 1 [code] ---
+import os
+import glob
+import numpy as np
+import folium
+from IPython.display import display
+
+BASE_DIR = os.path.abspath(os.path.join(os.getcwd(), '../../GNSS_Multipath_Project'))
+RAW_DIR  = os.path.join(BASE_DIR, 'data/01_raw')
+
+COLORS = ['blue', 'red', 'green', 'orange', 'purple', 'darkblue', 'darkred', 'cadetblue']
+
+def _nmea_to_dd(coord, direction):
+    val = float(coord)
+    deg = int(val / 100)
+    dd  = deg + (val - deg * 100) / 60
+    return -dd if direction in ('S', 'W') else dd
+
+def parse_nmea(filepath):
+    pts = []
+    with open(filepath, 'r', errors='ignore') as fh:
+        for line in fh:
+            if '$GPGGA' not in line and '$GNGGA' not in line:
+                continue
+            p = line.strip().split(',')
+            if len(p) > 5 and p[2] and p[4]:
+                try:
+                    pts.append((_nmea_to_dd(p[2], p[3]), _nmea_to_dd(p[4], p[5])))
+                except (ValueError, IndexError):
+                    pass
+    return pts
+
+def _best_nmea_files(run_dir):
+    """Return SPAN 10Hz files, falling back to 1Hz, then chipset."""
+    for pattern in ['SPAN_*_10Hz.nmea', 'SPAN_*_1Hz.nmea', '*_chipset.nmea']:
+        files = sorted(glob.glob(os.path.join(run_dir, pattern)))
+        if files:
+            return files
+    return []
+
+def plot_day(date_str, run_dirs):
+    """Parse all SPAN tracks for the given run directories and return a folium map."""
+    tracks = []
+    for run_dir in run_dirs:
+        run_label = os.path.basename(run_dir)
+        for fpath in _best_nmea_files(run_dir):
+            device = os.path.basename(fpath).split('_')[0] if 'SPAN' not in fpath else \
+                     os.path.basename(fpath).replace('SPAN_', '').rsplit('_', 2)[0]
+            pts = parse_nmea(fpath)
+            if pts:
+                tracks.append((f"{run_label} / {device}", pts))
+
+    if not tracks:
+        print(f"{date_str}: no coordinate data found")
+        return None
+
+    all_pts  = [p for _, pts in tracks for p in pts]
+    center   = [np.mean([p[0] for p in all_pts]), np.mean([p[1] for p in all_pts])]
+
+    m = folium.Map(location=center, zoom_start=16, tiles='cartodbpositron')
+    folium.TileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        attr='Esri', name='Esri Satellite', overlay=False, control=True
+    ).add_to(m)
+
+    for i, (label, pts) in enumerate(tracks):
+        color = COLORS[i % len(COLORS)]
+        folium.PolyLine(pts, color=color, weight=4, opacity=0.85, tooltip=label).add_to(m)
+        folium.Marker(pts[0],  popup=f"Start: {label}", icon=folium.Icon(color='green',  icon='play')).add_to(m)
+        folium.Marker(pts[-1], popup=f"End:   {label}", icon=folium.Icon(color=color,    icon='stop')).add_to(m)
+
+    folium.LayerControl().add_to(m)
+    print(f"{date_str}: {len(tracks)} track(s), {len(all_pts):,} points")
+    return m
+
+print('Setup complete. BASE_DIR =', BASE_DIR)
+
+--- CELL 2 [markdown] ---
+## 2020-05-14 — Mountain View, CA (runs 1 & 2)
+
+--- CELL 3 [code] ---
+m = plot_day('2020-05-14', [
+    os.path.join(RAW_DIR, '2020-05-14-US-MTV-1'),
+    os.path.join(RAW_DIR, '2020-05-14-US-MTV-2'),
+])
+display(m)
+
+--- CELL 4 [markdown] ---
+## 2020-05-21 — Mountain View, CA (runs 1 & 2)
+
+--- CELL 5 [code] ---
+m = plot_day('2020-05-21', [
+    os.path.join(RAW_DIR, '2020-05-21-US-MTV-1'),
+    os.path.join(RAW_DIR, '2020-05-21-US-MTV-2'),
+])
+display(m)
+
+--- CELL 6 [markdown] ---
+## 2020-05-29 — Mountain View, CA (runs 1 & 2)
+
+--- CELL 7 [code] ---
+m = plot_day('2020-05-29', [
+    os.path.join(RAW_DIR, '2020-05-29-US-MTV-1'),
+    os.path.join(RAW_DIR, '2020-05-29-US-MTV-2'),
+])
+display(m)
+
+--- CELL 8 [markdown] ---
+## 2020-06-04 — Mountain View, CA (run 1)
+
+--- CELL 9 [code] ---
+m = plot_day('2020-06-04', [
+    os.path.join(RAW_DIR, '2020-06-04-US-MTV-1'),
+])
+display(m)
+
+--- CELL 10 [markdown] ---
+## 2020-06-05 — Mountain View, CA (runs 1 & 2)
+
+--- CELL 11 [code] ---
+m = plot_day('2020-06-05', [
+    os.path.join(RAW_DIR, '2020-06-05-US-MTV-1'),
+    os.path.join(RAW_DIR, '2020-06-05-US-MTV-2'),
+])
+display(m)
+
+--- CELL 12 [markdown] ---
+## 2020-06-11 — Mountain View, CA (run 1)
+
+--- CELL 13 [code] ---
+m = plot_day('2020-06-11', [
+    os.path.join(RAW_DIR, '2020-06-11-US-MTV-1'),
+])
+display(m)
+
+--- CELL 14 [markdown] ---
+## 2020-07-08 — Mountain View, CA (run 1)
+
+--- CELL 15 [code] ---
+m = plot_day('2020-07-08', [
+    os.path.join(RAW_DIR, '2020-07-08-US-MTV-1'),
+])
+display(m)
+
+--- CELL 16 [markdown] ---
+## 2020-07-17 — Mountain View, CA (runs 1 & 2)
+
+--- CELL 17 [code] ---
+m = plot_day('2020-07-17', [
+    os.path.join(RAW_DIR, '2020-07-17-US-MTV-1'),
+    os.path.join(RAW_DIR, '2020-07-17-US-MTV-2'),
+])
+display(m)
+
+--- CELL 18 [markdown] ---
+## 2020-08-03 — Mountain View, CA (run 1)
+
+--- CELL 19 [code] ---
+m = plot_day('2020-08-03', [
+    os.path.join(RAW_DIR, '2020-08-03-US-MTV-1'),
+])
+display(m)
+
+--- CELL 20 [markdown] ---
+## 2020-08-06 — Mountain View, CA (run 2)
+
+--- CELL 21 [code] ---
+m = plot_day('2020-08-06', [
+    os.path.join(RAW_DIR, '2020-08-06-US-MTV-2'),
+])
+display(m)
+
+--- CELL 22 [markdown] ---
+## 2020-09-04 — San Francisco, CA (runs 1 & 2)
+
+--- CELL 23 [code] ---
+m = plot_day('2020-09-04', [
+    os.path.join(RAW_DIR, '2020-09-04-US-SF-1'),
+    os.path.join(RAW_DIR, '2020-09-04-US-SF-2'),
+])
+display(m)
+
