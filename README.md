@@ -19,7 +19,7 @@ This repository is the code and analysis for an MSc dissertation. The written pl
 | Is the ground-truth label trustworthy? | **No.** The device `MultipathIndicator` is **statistically independent of measurements that carry real errors** (AUC 0.57, r ≈ 0) and is **constellation-biased**. |
 | Does detection improve positioning? | **Not by exclusion** — even with oracle labels, on good and bad receivers, excluding multipath satellites does not lower position error (validated WLS solver). Detection is better used as an **integrity signal**. |
 
-Full numbers: [`dissertation/03_figures_numbers_reference.md`](dissertation/03_figures_numbers_reference.md).
+
 
 ---
 
