@@ -16,8 +16,8 @@ This repository is the code and analysis for an MSc dissertation. The written pl
 | Does it generalise? | Trained on some drives, it holds on **completely unseen drives (AUC 0.84–0.90)** with *no location feature* — it catches multipath by its physical signature, not memorised places. |
 | Does it transfer to an independent scenario? | A ray-traced simulation of the Warwick campus is caught at **AUC 0.93–0.99**, but only after **raw-C/N0 + decision-threshold recalibration** (a ~13 dB C/N0 offset must be handled). |
 | Do temporal / attention models help? | **No accuracy gain** — the multipath signal is essentially instantaneous. Attention adds **interpretability** (a ~15-epoch useful window) and a **~14× cheaper** partial model. |
-| Is the ground-truth label trustworthy? | **No.** The device `MultipathIndicator` is **statistically independent of measurements that carry real errors** (AUC 0.57, r ≈ 0) and is **constellation-biased**. |
-| Does detection improve positioning? | **Not by exclusion** — even with oracle labels, on good and bad receivers, excluding multipath satellites does not lower position error (validated WLS solver). Detection is better used as an **integrity signal**. |
+| Is the ground-truth label trustworthy? | **Barely.** The device `MultipathIndicator`'s association with measurements that carry real errors is **negligible** (φ = 0.038, odds ratio 1.64; χ² significant only because N ≈ 281k), and it is **constellation-biased**. It carries almost no information about which measurements truly corrupt the position. |
+| Does detection improve positioning? | **Only if you exclude the *right* measurements.** Excluding by the **device flag** does nothing (it's error-uncorrelated). Excluding the **actually-faulty** measurements (residual vs true trajectory) improves horizontal error by up to ~12% on a poor receiver — so the bottleneck is *fault identification*, not exclusion. Learned soft re-weighting still loses to the receiver's own uncertainty; a **residual-based detector** is the deployable target. |
 
 
 
@@ -65,7 +65,7 @@ Run each pipeline in order (later notebooks read earlier caches).
 | `warwick_multipath/warwick_senav_deepdive.ipynb` | SE-NAV parse → map → EDA → skyplot → classification → **SHAP** (in-domain) |
 | `warwick_multipath/sdc_to_warwick_transfer.ipynb` | train on SDC → test on the Warwick campus simulation; calibration, threshold recalibration, **campus hotspot map for site visits** |
 | `attention_brnn/` | attention-aided BiLSTM/BiGRU: `01_windowing` → `02_sdc_attention_brnn` → `03_attention_transfer` (see its own [README](notebooks_python/attention_brnn/README.md)) |
-| `positioning/position_mitigation.ipynb` | validated WLS solver; does excluding/down-weighting multipath satellites improve position? (No.) + integrity model |
+| `positioning/position_mitigation.ipynb` | validated WLS solver; exclusion by device-flag vs **residual-fault oracle** vs **learned uncertainty-weighting** — does it improve position? (device-flag no; residual-fault yes ~12%; learned weighting no) + integrity model |
 | `analysis/interpretability_baselines.ipynb` | classical GNSS baselines, bootstrap CIs, session-grouped CV, PR curves, **cross-domain SHAP** |
 | `analysis/residual_label_integrity.ipynb` | physics-based residual label vs the device flag, integrity model, calibration curves, booster/ensemble |
 
@@ -97,9 +97,9 @@ Suggested order for a fresh run:
 ---
 
 ## Caveats (carried throughout the analysis)
-1. The device `MultipathIndicator` = *detected multipath* (not strictly NLOS), is **constellation-biased**, and is **uncorrelated with real measurement errors** — a central, acknowledged limitation.
+1. The device `MultipathIndicator` = *detected multipath* (not strictly NLOS), is **constellation-biased**, and has only a **negligible association with real measurement errors** (φ = 0.038, OR = 1.64) — a central, acknowledged limitation.
 2. The Warwick label is **NLOS** (a different definition); the simulation is idealised and **GPS-only**.
 3. Real-world generality rests on **cross-route SDC** evidence; real→sim is the *easy* transfer direction (sim→real fails, AUC 0.62).
 4. Cross-dataset transfer needs **raw C/N0 + threshold recalibration**, not per-domain standardisation (which breaks it).
 5. Attention/temporal modelling provides **interpretability and efficiency, not accuracy**.
-6. Multipath exclusion does not improve positioning here → the useful framing is **integrity**, and a **residual-based label** is the better future target.
+6. **Device-flag** exclusion and learned soft re-weighting do **not** improve positioning (the flag is error-uncorrelated; the receiver's own uncertainty is near-optimal), but **residual-fault** (true-position) exclusion **does** (~12% on a poor receiver, oracle) → the bottleneck is **fault identification**, and a **residual-based detector** is the deployable target; detection's value is also **upstream** (integrity) and **downstream** (map-aiding / fusion).
